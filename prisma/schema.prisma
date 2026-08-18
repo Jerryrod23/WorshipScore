@@ -1,0 +1,117 @@
+generator client {
+  provider = "prisma-client"
+  output   = "./generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Usuario {
+  id            String   @id @default(uuid())
+  authUserId    String   @unique @db.Uuid
+  nombre        String
+  email         String   @unique
+  rol           Rol      @default(USER)
+  estado        Estado   @default(ACTIVO)
+  fechaRegistro DateTime @default(now())
+
+  descargas Descarga[]
+  solicitudes SolicitudPartitura[]
+}
+
+enum Rol {
+  USER
+  ADMIN
+}
+
+enum Estado {
+  ACTIVO
+  INACTIVO
+}
+
+model Partitura {
+  id          String         @id @default(uuid())
+  titulo      String
+  compositor  String?
+  descripcion String?
+  instrumento String
+  genero      String
+  nivel       NivelPartitura @default(INTERMEDIO)
+  tonalidad   String?
+
+  portadaUrl      String?
+  archivoPdf      String?
+  archivoMidi     String?
+  archivoMusicXml String?
+
+  publicada Boolean @default(true)
+
+  fechaCreacion      DateTime @default(now())
+  fechaActualizacion DateTime @updatedAt
+
+  descargas Descarga[]
+  solicitudes SolicitudPartitura[]
+
+  @@index([titulo])
+  @@index([compositor])
+  @@index([instrumento])
+  @@index([genero])
+  @@index([publicada])
+}
+
+model Descarga {
+  id String @id @default(uuid())
+
+  usuarioId   String
+  partituraId String
+
+  fecha DateTime @default(now())
+
+  usuario   Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  partitura Partitura @relation(fields: [partituraId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+  @@index([partituraId])
+  @@index([fecha])
+}
+
+enum NivelPartitura {
+  PRINCIPIANTE
+  INTERMEDIO
+  AVANZADO
+}
+
+model SolicitudPartitura {
+  id                 String           @id @default(uuid())
+  usuarioId          String
+  partituraId        String?
+
+  titulo             String
+  compositor         String?
+  instrumento        String?
+  descripcion        String?
+  comentarios        String?
+
+  estado             EstadoSolicitud  @default(PENDIENTE)
+
+  fechaSolicitud     DateTime         @default(now())
+  fechaActualizacion DateTime         @updatedAt
+
+  usuario            Usuario          @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  partitura          Partitura?       @relation(fields: [partituraId], references: [id], onDelete: SetNull)
+
+  @@index([usuarioId])
+  @@index([partituraId])
+  @@index([estado])
+  @@index([fechaSolicitud])
+}
+
+enum EstadoSolicitud {
+  PENDIENTE
+  EN_PROCESO
+  COMPLETADA
+  RECHAZADA
+}
+
+
