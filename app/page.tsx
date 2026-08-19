@@ -30,7 +30,7 @@ export default function HomePage() {
               </Link>
 
               <Link
-                href="/solicitar"
+                href="/solicitudes/nueva"
                 className="rounded-lg border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
               >
                 Solicitar una partitura
@@ -119,7 +119,7 @@ export default function HomePage() {
               </p>
 
               <Link
-                href="/solicitar"
+                href="/solicitudes/nueva"
                 className="mt-5 inline-block text-sm font-semibold text-slate-900 hover:underline"
               >
                 Hacer una solicitud →
