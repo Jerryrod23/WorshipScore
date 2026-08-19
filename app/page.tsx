@@ -145,7 +145,7 @@ export default function HomePage() {
               </p>
 
               <Link
-                href="/solicitar"
+                href="/solicitudes/nueva"
                 className="mt-7 inline-block rounded-lg bg-white px-6 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-100"
               >
                 Solicitar una partitura
