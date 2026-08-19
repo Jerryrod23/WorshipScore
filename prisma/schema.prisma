@@ -16,8 +16,8 @@ model Usuario {
   estado        Estado   @default(ACTIVO)
   fechaRegistro DateTime @default(now())
 
-  descargas    Descarga[]
-  solicitudes  SolicitudPartitura[]
+  descargas   Descarga[]
+  solicitudes SolicitudPartitura[]
 }
 
 enum Rol {
@@ -30,12 +30,6 @@ enum Estado {
   INACTIVO
 }
 
-//
-// CANCIÓN
-//
-// Contiene la información general de la obra musical.
-// Una canción puede tener múltiples partituras.
-//
 model Cancion {
   id                 String   @id @default(uuid())
   titulo             String
@@ -46,54 +40,46 @@ model Cancion {
   fechaCreacion      DateTime @default(now())
   fechaActualizacion DateTime @updatedAt
 
-  partituras         Partitura[]
-  solicitudes        SolicitudPartitura[]
+  partituras   Partitura[]
+  solicitudes  SolicitudPartitura[]
 
   @@index([titulo])
   @@index([compositor])
   @@index([genero])
 }
 
-//
-// PARTITURA
-//
-// Representa una versión específica de una canción.
-// Por ejemplo:
-// Canon in D - Piano - Do Mayor
-// Canon in D - Piano - Fa Mayor
-// Canon in D - Piano - Sol Mayor
-//
 model Partitura {
-  id              String         @id @default(uuid())
+  id        String  @id @default(uuid())
+  cancionId String
 
-  cancionId       String
-  cancion         Cancion        @relation(
+  cancion Cancion @relation(
     fields: [cancionId],
     references: [id],
     onDelete: Cascade
   )
 
-  nivel           NivelPartitura @default(INTERMEDIO)
-  tonalidad       String
+  instrumento String
+  nivel       NivelPartitura @default(INTERMEDIO)
+  tonalidad   String
 
   portadaUrl      String?
   archivoPdf      String?
   archivoMidi     String?
   archivoMusicXml String?
 
-  publicada       Boolean        @default(true)
+  publicada Boolean @default(true)
 
-  fechaCreacion      DateTime    @default(now())
-  fechaActualizacion DateTime    @updatedAt
+  fechaCreacion      DateTime @default(now())
+  fechaActualizacion DateTime @updatedAt
 
-  descargas       Descarga[]
-  solicitudes     SolicitudPartitura[]
+  descargas   Descarga[]
+  solicitudes SolicitudPartitura[]
 
   @@index([cancionId])
+  @@index([instrumento])
   @@index([tonalidad])
   @@index([publicada])
 
-  // Evita duplicar la misma versión
   @@unique([cancionId, instrumento, tonalidad])
 }
 
@@ -103,27 +89,21 @@ enum NivelPartitura {
   AVANZADO
 }
 
-//
-// DESCARGA
-//
-// Registra que un usuario descargó una versión específica
-// de una partitura.
-//
 model Descarga {
-  id          String   @id @default(uuid())
+  id String @id @default(uuid())
 
   usuarioId   String
   partituraId String
 
-  fecha       DateTime @default(now())
+  fecha DateTime @default(now())
 
-  usuario     Usuario   @relation(
+  usuario Usuario @relation(
     fields: [usuarioId],
     references: [id],
     onDelete: Cascade
   )
 
-  partitura   Partitura @relation(
+  partitura Partitura @relation(
     fields: [partituraId],
     references: [id],
     onDelete: Cascade
@@ -134,43 +114,36 @@ model Descarga {
   @@index([fecha])
 }
 
-//
-// SOLICITUD DE PARTITURA
-//
-// El usuario solicita una canción y una tonalidad específica.
-//
 model SolicitudPartitura {
-  id                  String          @id @default(uuid())
+  id String @id @default(uuid())
 
-  usuarioId           String
-  cancionId           String
-
-  // Puede ser NULL mientras la solicitud está pendiente.
-  partituraId         String?
+  usuarioId   String
+  cancionId   String
+  partituraId String?
 
   tonalidadSolicitada String
 
-  descripcion         String?
-  comentarios         String?
+  descripcion String?
+  comentarios String?
 
-  estado              EstadoSolicitud @default(PENDIENTE)
+  estado EstadoSolicitud @default(PENDIENTE)
 
-  fechaSolicitud      DateTime        @default(now())
-  fechaActualizacion  DateTime        @updatedAt
+  fechaSolicitud     DateTime @default(now())
+  fechaActualizacion DateTime @updatedAt
 
-  usuario             Usuario         @relation(
+  usuario Usuario @relation(
     fields: [usuarioId],
     references: [id],
     onDelete: Cascade
   )
 
-  cancion             Cancion         @relation(
+  cancion Cancion @relation(
     fields: [cancionId],
     references: [id],
     onDelete: Cascade
   )
 
-  partitura            Partitura?      @relation(
+  partitura Partitura? @relation(
     fields: [partituraId],
     references: [id],
     onDelete: SetNull
