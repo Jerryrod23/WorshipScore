@@ -40,8 +40,8 @@ model Cancion {
   fechaCreacion      DateTime @default(now())
   fechaActualizacion DateTime @updatedAt
 
-  partituras   Partitura[]
-  solicitudes  SolicitudPartitura[]
+  partituras  Partitura[]
+  solicitudes SolicitudPartitura[]
 
   @@index([titulo])
   @@index([compositor])
@@ -51,12 +51,7 @@ model Cancion {
 model Partitura {
   id        String  @id @default(uuid())
   cancionId String
-
-  cancion Cancion @relation(
-    fields: [cancionId],
-    references: [id],
-    onDelete: Cascade
-  )
+  cancion   Cancion @relation(fields: [cancionId], references: [id], onDelete: Cascade)
 
   instrumento String
   nivel       NivelPartitura @default(INTERMEDIO)
@@ -79,7 +74,6 @@ model Partitura {
   @@index([instrumento])
   @@index([tonalidad])
   @@index([publicada])
-
   @@unique([cancionId, instrumento, tonalidad])
 }
 
@@ -94,20 +88,10 @@ model Descarga {
 
   usuarioId   String
   partituraId String
+  fecha       DateTime @default(now())
 
-  fecha DateTime @default(now())
-
-  usuario Usuario @relation(
-    fields: [usuarioId],
-    references: [id],
-    onDelete: Cascade
-  )
-
-  partitura Partitura @relation(
-    fields: [partituraId],
-    references: [id],
-    onDelete: Cascade
-  )
+  usuario   Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  partitura Partitura @relation(fields: [partituraId], references: [id], onDelete: Cascade)
 
   @@index([usuarioId])
   @@index([partituraId])
@@ -131,23 +115,9 @@ model SolicitudPartitura {
   fechaSolicitud     DateTime @default(now())
   fechaActualizacion DateTime @updatedAt
 
-  usuario Usuario @relation(
-    fields: [usuarioId],
-    references: [id],
-    onDelete: Cascade
-  )
-
-  cancion Cancion @relation(
-    fields: [cancionId],
-    references: [id],
-    onDelete: Cascade
-  )
-
-  partitura Partitura? @relation(
-    fields: [partituraId],
-    references: [id],
-    onDelete: SetNull
-  )
+  usuario   Usuario    @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  cancion   Cancion    @relation(fields: [cancionId], references: [id], onDelete: Cascade)
+  partitura Partitura? @relation(fields: [partituraId], references: [id], onDelete: SetNull)
 
   @@index([usuarioId])
   @@index([cancionId])
