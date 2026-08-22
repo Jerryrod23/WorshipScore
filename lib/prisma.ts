@@ -16,11 +16,20 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 const clienteExistente = globalForPrisma.prisma as
-  | (PrismaClient & { notificacion?: unknown })
+  | (PrismaClient & {
+      notificacion?: unknown;
+      plan?: unknown;
+      suscripcion?: unknown;
+      pago?: unknown;
+    })
   | undefined;
 
 export const prisma =
-  clienteExistente && clienteExistente.notificacion
+  clienteExistente &&
+  clienteExistente.notificacion &&
+  clienteExistente.plan &&
+  clienteExistente.suscripcion &&
+  clienteExistente.pago
     ? clienteExistente
     : new PrismaClient({
         adapter,

@@ -80,15 +80,33 @@ export async function crearSolicitud(formData: FormData) {
     formData.get("cancionId") ?? ""
   ).trim();
 
+  const nuevaCancion = formData.get("nuevaCancion") === "true";
+
   // -----------------------------------------
   // Validaciones
   // -----------------------------------------
 
-  if (!titulo) {
+  if (!titulo && !nuevaCancion) {
     return {
       success: false,
       message:
         "El título de la partitura es obligatorio.",
+    };
+  }
+
+  if (nuevaCancion && !titulo) {
+    return {
+      success: false,
+      message:
+        "El título de la nueva canción es obligatorio.",
+    };
+  }
+
+  if (!nuevaCancion && !cancionId) {
+    return {
+      success: false,
+      message:
+        "Selecciona una canción o indica que es una canción nueva.",
     };
   }
 
@@ -114,7 +132,7 @@ export async function crearSolicitud(formData: FormData) {
 
   let cancion = null;
 
-  if (cancionId) {
+  if (cancionId && !nuevaCancion) {
     cancion = await prisma.cancion.findUnique({
       where: {
         id: cancionId,
@@ -130,11 +148,39 @@ export async function crearSolicitud(formData: FormData) {
     }
   }
 
+  if (nuevaCancion) {
+    const cancionExistente = await prisma.cancion.findFirst({
+      where: {
+        titulo: {
+          equals: titulo,
+          mode: "insensitive",
+        },
+      },
+    });
+
+    if (cancionExistente) {
+      return {
+        success: false,
+        message:
+          `Ya existe una canción con el título "${cancionExistente.titulo}". Selecciónala como canción existente.`,
+      };
+    }
+
+    cancion = await prisma.cancion.create({
+      data: {
+        titulo,
+        compositor: compositor || null,
+        descripcion: descripcion || null,
+        genero: "Pendiente",
+      },
+    });
+  }
+
   // -----------------------------------------
   // Si no seleccionó canción, buscar por título
   // -----------------------------------------
 
-  if (!cancion) {
+  if (!cancion && !nuevaCancion) {
     cancion = await prisma.cancion.findFirst({
       where: {
         titulo: {
@@ -158,6 +204,13 @@ export async function crearSolicitud(formData: FormData) {
         },
       });
     }
+  }
+
+  if (!cancion) {
+    return {
+      success: false,
+      message: "No fue posible preparar la canción para la solicitud.",
+    };
   }
 
   try {

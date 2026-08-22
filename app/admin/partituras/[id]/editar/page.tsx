@@ -43,6 +43,7 @@ export default async function EditarPartituraPage({
           instrumento: partitura.instrumento,
           nivel: partitura.nivel,
           tonalidad: partitura.tonalidad,
+          precioIndividual: partitura.precioIndividual.toString(),
           publicada: partitura.publicada,
           archivoPdf: partitura.archivoPdf,
         }}

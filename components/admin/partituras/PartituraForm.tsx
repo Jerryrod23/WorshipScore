@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import {
   guardarPartitura,
@@ -28,6 +30,7 @@ type PartituraFormProps = {
     instrumento: string;
     nivel: NivelPartitura;
     tonalidad: string;
+    precioIndividual: string;
     publicada: boolean;
     archivoPdf: string | null;
   };
@@ -37,9 +40,18 @@ export default function PartituraForm({
   canciones,
   initialData,
 }: PartituraFormProps) {
+  const router = useRouter();
+  const [crearCancion, setCrearCancion] = useState(
+    !initialData && canciones.length === 0
+  );
+
   const [cancionId, setCancionId] = useState(
     initialData?.cancionId ?? ""
   );
+
+  const [tituloCancion, setTituloCancion] = useState("");
+  const [compositorCancion, setCompositorCancion] = useState("");
+  const [generoCancion, setGeneroCancion] = useState("");
 
   const [instrumento, setInstrumento] = useState(
     initialData?.instrumento ?? ""
@@ -51,6 +63,10 @@ export default function PartituraForm({
 
   const [tonalidad, setTonalidad] = useState(
     initialData?.tonalidad ?? ""
+  );
+
+  const [precioIndividual, setPrecioIndividual] = useState(
+    initialData?.precioIndividual ?? "1.99"
   );
 
   const [publicada, setPublicada] = useState(
@@ -84,9 +100,14 @@ export default function PartituraForm({
       }
 
       formData.append("cancionId", cancionId);
+      formData.append("nuevaCancion", crearCancion ? "true" : "false");
+      formData.append("tituloCancion", tituloCancion);
+      formData.append("compositorCancion", compositorCancion);
+      formData.append("generoCancion", generoCancion);
       formData.append("instrumento", instrumento);
       formData.append("nivel", nivel);
       formData.append("tonalidad", tonalidad);
+      formData.append("precioIndividual", precioIndividual);
       formData.append(
         "publicada",
         publicada ? "true" : "false"
@@ -159,10 +180,11 @@ export default function PartituraForm({
         );
       }
 
-      window.location.href =
+      router.push(
         `/admin/partituras?success=${
           initialData ? "updated" : "created"
-        }`;
+        }`
+      );
 
     } catch (error) {
       console.error(error);
@@ -197,31 +219,65 @@ export default function PartituraForm({
           Canción
         </label>
 
-        <select
-          required
-          disabled={Boolean(initialData)}
-          className="w-full rounded border px-3 py-2"
-          value={cancionId}
-          onChange={(e) =>
-            setCancionId(e.target.value)
-          }
-        >
-          <option value="">
-            Seleccione una canción
-          </option>
+        {!initialData && (
+          <label className="mb-3 flex items-center gap-3 text-sm text-slate-600">
+            <input
+              type="checkbox"
+              checked={crearCancion}
+              onChange={(event) => {
+                setCrearCancion(event.target.checked);
+                if (event.target.checked) {
+                  setCancionId("");
+                }
+              }}
+            />
+            Crear una nueva canción
+          </label>
+        )}
 
-          {canciones.map((cancion) => (
-            <option
-              key={cancion.id}
-              value={cancion.id}
-            >
-              {cancion.titulo}
-              {cancion.compositor
-                ? ` — ${cancion.compositor}`
-                : ""}
-            </option>
-          ))}
-        </select>
+        {crearCancion ? (
+          <div className="space-y-3 rounded-lg bg-slate-50 p-4">
+            <input
+              type="text"
+              required
+              placeholder="Título de la canción"
+              className="w-full rounded border px-3 py-2"
+              value={tituloCancion}
+              onChange={(event) => setTituloCancion(event.target.value)}
+            />
+            <input
+              type="text"
+              placeholder="Compositor (opcional)"
+              className="w-full rounded border px-3 py-2"
+              value={compositorCancion}
+              onChange={(event) => setCompositorCancion(event.target.value)}
+            />
+            <input
+              type="text"
+              placeholder="Género (opcional)"
+              className="w-full rounded border px-3 py-2"
+              value={generoCancion}
+              onChange={(event) => setGeneroCancion(event.target.value)}
+            />
+          </div>
+        ) : (
+          <select
+            required
+            disabled={Boolean(initialData)}
+            className="w-full rounded border px-3 py-2"
+            value={cancionId}
+            onChange={(e) => setCancionId(e.target.value)}
+          >
+            <option value="">Seleccione una canción</option>
+
+            {canciones.map((cancion) => (
+              <option key={cancion.id} value={cancion.id}>
+                {cancion.titulo}
+                {cancion.compositor ? ` — ${cancion.compositor}` : ""}
+              </option>
+            ))}
+          </select>
+        )}
 
         {cancionSeleccionada && (
           <div className="mt-2 rounded bg-slate-50 p-3 text-sm text-slate-600">
@@ -309,6 +365,34 @@ export default function PartituraForm({
       </div>
 
       {/* PDF */}
+      {/* Precio individual */}
+      <div>
+        <label
+          htmlFor="precioIndividual"
+          className="mb-2 block font-medium"
+        >
+          Precio individual (USD)
+        </label>
+
+        <input
+          id="precioIndividual"
+          name="precioIndividual"
+          type="number"
+          min="0"
+          step="0.01"
+          required
+          className="w-full rounded border px-3 py-2"
+          value={precioIndividual}
+          onChange={(event) => setPrecioIndividual(event.target.value)}
+          placeholder="1.99"
+        />
+
+        <p className="mt-1 text-sm text-gray-500">
+          Precio que pagará un usuario sin suscripción para descargar esta partitura.
+        </p>
+      </div>
+
+      {/* PDF */}
       <div className="rounded-lg border border-slate-200 p-5">
         <label className="mb-2 block font-medium">
           Archivo PDF
@@ -378,12 +462,12 @@ export default function PartituraForm({
               : "Guardar Partitura"}
         </button>
 
-        <a
+        <Link
           href="/admin/partituras"
           className="rounded border px-4 py-2 hover:bg-gray-100"
         >
           Cancelar
-        </a>
+        </Link>
       </div>
     </form>
   );

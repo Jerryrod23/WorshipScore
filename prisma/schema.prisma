@@ -8,16 +8,18 @@ datasource db {
 }
 
 model Usuario {
-  id            String               @id @default(uuid())
-  authUserId    String               @unique @db.Uuid
-  nombre        String
-  email         String               @unique
-  rol           Rol                  @default(USER)
-  estado        Estado               @default(ACTIVO)
-  fechaRegistro DateTime             @default(now())
-  descargas     Descarga[]
-  solicitudes   SolicitudPartitura[]
+  id             String               @id @default(uuid())
+  authUserId     String               @unique @db.Uuid
+  nombre         String
+  email          String               @unique
+  rol            Rol                  @default(USER)
+  estado         Estado               @default(ACTIVO)
+  fechaRegistro  DateTime             @default(now())
+  descargas      Descarga[]
+  solicitudes    SolicitudPartitura[]
   notificaciones Notificacion[]
+  suscripciones  Suscripcion[]
+  pagos          Pago[]
 }
 
 model Cancion {
@@ -41,6 +43,7 @@ model Partitura {
   instrumento        String
   nivel              NivelPartitura       @default(INTERMEDIO)
   tonalidad          String
+  precioIndividual   Decimal              @default(1.99) @db.Decimal(10, 2)
   portadaUrl         String?
   archivoPdf         String?
   archivoMidi        String?
@@ -52,6 +55,7 @@ model Partitura {
   descargas          Descarga[]
   cancion            Cancion              @relation(fields: [cancionId], references: [id], onDelete: Cascade)
   solicitudes        SolicitudPartitura[]
+  pagos              Pago[]
 
   @@index([cancionId])
   @@index([instrumento])
@@ -113,6 +117,66 @@ model Notificacion {
   @@index([fechaCreacion])
 }
 
+model Plan {
+  id                 String        @id @default(uuid())
+  nombre             String
+  descripcion        String?
+  precio             Decimal       @db.Decimal(10, 2)
+  moneda             String        @default("USD")
+  intervalo          IntervaloPlan
+  limiteDescargas    Int
+  activo             Boolean       @default(true)
+  stripePriceId      String?       @unique
+  fechaCreacion      DateTime      @default(now())
+  fechaActualizacion DateTime      @updatedAt
+  suscripciones      Suscripcion[]
+
+  @@index([activo])
+  @@index([intervalo])
+}
+
+model Suscripcion {
+  id                   String            @id @default(uuid())
+  usuarioId            String
+  planId               String
+  estado               EstadoSuscripcion @default(ACTIVA)
+  fechaInicio          DateTime
+  fechaFin             DateTime
+  descargasUsadas      Int               @default(0)
+  stripeSubscriptionId String?           @unique
+  usuario              Usuario           @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  plan                 Plan              @relation(fields: [planId], references: [id])
+  pagos                Pago[]
+  fechaCreacion        DateTime          @default(now())
+  fechaActualizacion   DateTime          @updatedAt
+
+  @@index([usuarioId, estado])
+  @@index([planId])
+  @@index([fechaFin])
+}
+
+model Pago {
+  id                    String       @id @default(uuid())
+  usuarioId             String
+  suscripcionId         String?
+  partituraId           String?
+  tipo                  TipoPago
+  estado                EstadoPago   @default(PENDIENTE)
+  monto                 Decimal      @db.Decimal(10, 2)
+  moneda                String       @default("USD")
+  stripePaymentIntentId String?      @unique
+  stripeCheckoutId      String?      @unique
+  fechaCreacion         DateTime     @default(now())
+  usuario               Usuario      @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  suscripcion           Suscripcion? @relation(fields: [suscripcionId], references: [id])
+  partitura             Partitura?   @relation(fields: [partituraId], references: [id])
+
+  @@index([usuarioId, estado])
+  @@index([suscripcionId])
+  @@index([partituraId])
+  @@index([fechaCreacion])
+}
+
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model Partitura_backup {
@@ -157,4 +221,28 @@ enum EstadoSolicitud {
   EN_PROCESO
   COMPLETADA
   RECHAZADA
+}
+
+enum IntervaloPlan {
+  MENSUAL
+  ANUAL
+}
+
+enum EstadoSuscripcion {
+  ACTIVA
+  CANCELADA
+  VENCIDA
+  PAGO_FALLIDO
+}
+
+enum TipoPago {
+  SUSCRIPCION
+  DESCARGA_INDIVIDUAL
+}
+
+enum EstadoPago {
+  PENDIENTE
+  APROBADO
+  RECHAZADO
+  REEMBOLSADO
 }

@@ -91,6 +91,13 @@ export default function Navbar({
           </Link>
 
           <Link
+            href="/planes"
+            className="text-sm font-medium text-slate-600 transition hover:text-slate-900"
+          >
+            Planes
+          </Link>
+
+          <Link
             href="/solicitudes"
             className="text-sm font-medium text-slate-600 transition hover:text-slate-900"
           >

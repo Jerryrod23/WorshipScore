@@ -134,7 +134,7 @@ export default async function AdminPage() {
         )}
       </section>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Link
           href="/admin/solicitudes"
           className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-slate-300 hover:shadow"
@@ -152,6 +152,16 @@ export default async function AdminPage() {
           <p className="font-semibold text-slate-900">Gestionar usuarios</p>
           <p className="mt-1 text-sm text-slate-500">
             Consulta y controla el acceso de las cuentas.
+          </p>
+        </Link>
+
+        <Link
+          href="/admin/planes"
+          className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-slate-300 hover:shadow"
+        >
+          <p className="font-semibold text-slate-900">Gestionar planes</p>
+          <p className="mt-1 text-sm text-slate-500">
+            Configura precios y límites de descarga.
           </p>
         </Link>
       </div>

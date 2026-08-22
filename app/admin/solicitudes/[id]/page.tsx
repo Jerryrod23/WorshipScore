@@ -503,14 +503,26 @@ export default async function AdminSolicitudDetallePage({
 															name="partituraId"
 															value={partitura.id}
 														/>
-														<button
-															type="submit"
-															name="accion"
-															value="asociar"
-															className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-														>
-															{estaAsociada ? "Asociada" : "Asociar"}
-														</button>
+															<div className="flex flex-wrap gap-2">
+																<button
+																	type="submit"
+																	name="accion"
+																	value="asociar"
+																	disabled={estaAsociada}
+																	className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-default disabled:bg-green-50 disabled:text-green-700"
+																>
+																	{estaAsociada ? "Asociada" : "Asociar"}
+																</button>
+
+																<button
+																	type="submit"
+																	name="accion"
+																	value="completar"
+																	className="rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700"
+																>
+																	Asociar y completar
+																</button>
+															</div>
 													</form>
 												)}
 											</div>
@@ -557,6 +569,12 @@ export default async function AdminSolicitudDetallePage({
 								</button>
 							</form>
 						)}
+
+												{puedeGestionar && !solicitud.partituraId && (
+													<p className="text-sm text-slate-500">
+														Selecciona una partitura compatible arriba o usa “Asociar y completar” para finalizar la solicitud.
+													</p>
+												)}
 
 						{puedeGestionar && (
 							<form action={gestionarSolicitud}>

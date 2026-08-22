@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { descargarPartitura } from "@/app/actions/descarga.actions";
+import { comprarDescarga } from "@/app/actions/billing.actions";
 
 type Props = {
   partituraId: string;
@@ -21,16 +22,38 @@ export default function DownloadPdfButton({
       const resultado = await descargarPartitura(partituraId);
 
       if (!resultado.success) {
-        setError(resultado.message);
+        if ("requiresPayment" in resultado && resultado.requiresPayment) {
+          const formData = new FormData();
+          formData.set("partituraId", partituraId);
+          const compra = await comprarDescarga(formData);
+
+          if (compra.success && compra.url) {
+            window.location.assign(compra.url);
+            return;
+          }
+
+          if (!compra.success) {
+            setError(compra.message ?? "No fue posible preparar el pago.");
+          } else {
+            setError("No fue posible iniciar el pago.");
+          }
+          return;
+        }
+
+        setError(
+          "message" in resultado
+            ? resultado.message ?? "No fue posible autorizar la descarga."
+            : "No fue posible autorizar la descarga."
+        );
         return;
       }
 
       // Abrir el PDF
-      window.open(
-        resultado.url,
-        "_blank",
-        "noopener,noreferrer"
-      );
+      if (resultado.url) {
+        window.open(resultado.url, "_blank", "noopener,noreferrer");
+      } else {
+        setError("No fue posible generar el enlace de descarga.");
+      }
     } catch (error) {
       console.error(error);
 

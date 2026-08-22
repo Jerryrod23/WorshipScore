@@ -62,7 +62,53 @@ export async function descargarPartitura(partituraId: string) {
     };
   }
 
-  // 6. Registrar descarga
+  const ahora = new Date();
+  const suscripcion = await prisma.suscripcion.findFirst({
+    where: {
+      usuarioId: usuario.id,
+      estado: "ACTIVA",
+      fechaInicio: { lte: ahora },
+      fechaFin: { gt: ahora },
+    },
+    include: { plan: true },
+    orderBy: { fechaFin: "desc" },
+  });
+
+  if (suscripcion) {
+    const actualizado = await prisma.suscripcion.updateMany({
+      where: {
+        id: suscripcion.id,
+        descargasUsadas: { lt: suscripcion.plan.limiteDescargas },
+      },
+      data: { descargasUsadas: { increment: 1 } },
+    });
+
+    if (actualizado.count === 0) {
+      return {
+        success: false,
+        message: `Has alcanzado el límite de ${suscripcion.plan.limiteDescargas} descargas de tu plan.`,
+      };
+    }
+  } else {
+    const pago = await prisma.pago.findFirst({
+      where: {
+        usuarioId: usuario.id,
+        partituraId: partitura.id,
+        tipo: "DESCARGA_INDIVIDUAL",
+        estado: "APROBADO",
+      },
+    });
+
+    if (!pago) {
+      return {
+        success: false,
+        message: `Esta descarga requiere un pago individual de $${partitura.precioIndividual.toString()} USD.`,
+        requiresPayment: true,
+      };
+    }
+  }
+
+  // 6. Crear la descarga solo después de autorizar el acceso.
   await prisma.descarga.create({
     data: {
       usuarioId: usuario.id,

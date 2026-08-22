@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import AlertaTemporal from "@/components/admin/AlertaTemporal";
+import { eliminarPartitura } from "@/app/actions/partitura.actions";
 
 export default async function AdminPartiturasPage({
   searchParams,
@@ -25,23 +26,23 @@ export default async function AdminPartiturasPage({
   return (
     <div className="container mx-auto p-6">
 
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
 
         <div>
-          <h1 className="text-3xl font-bold">
+          <h1 className="text-3xl font-bold text-slate-900">
             Gestión de Partituras
           </h1>
 
-          <p className="text-muted-foreground">
-            Total: {partituras.length}
+          <p className="mt-2 text-sm text-slate-500">
+            Administra las partituras disponibles en el catálogo.
           </p>
         </div>
 
         <Link
           href="/admin/partituras/nueva"
-          className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+          className="rounded-lg bg-slate-900 px-5 py-3 text-center text-sm font-semibold text-white transition hover:bg-slate-800"
         >
-          Nueva Partitura
+          + Nueva partitura
         </Link>
 
       </div>
@@ -58,126 +59,183 @@ export default async function AdminPartiturasPage({
         />
       )}
 
-      <div className="overflow-hidden rounded-lg border">
+      <div className="mb-8 grid gap-4 sm:grid-cols-3">
 
-        <table className="w-full">
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <p className="text-sm text-slate-500">
+            Total de partituras
+          </p>
 
-          <thead className="bg-gray-100">
+          <p className="mt-2 text-3xl font-bold text-slate-900">
+            {partituras.length}
+          </p>
+        </div>
 
-            <tr>
-              <th className="p-3 text-left">
-                Canción
-              </th>
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <p className="text-sm text-slate-500">
+            Publicadas
+          </p>
 
-              <th className="p-3 text-left">
-                Compositor
-              </th>
+          <p className="mt-2 text-3xl font-bold text-green-600">
+            {partituras.filter((partitura) => partitura.publicada).length}
+          </p>
+        </div>
 
-              <th className="p-3 text-left">
-                Instrumento
-              </th>
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <p className="text-sm text-slate-500">
+            Ocultas
+          </p>
 
-              <th className="p-3 text-left">
-                Tonalidad
-              </th>
+          <p className="mt-2 text-3xl font-bold text-slate-500">
+            {partituras.filter((partitura) => !partitura.publicada).length}
+          </p>
+        </div>
 
-              <th className="p-3 text-left">
-                Nivel
-              </th>
+      </div>
 
-              <th className="p-3 text-left">
-                Estado
-              </th>
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
 
-              <th className="p-3 text-right">
-                Acciones
-              </th>
-            </tr>
+        {partituras.length === 0 ? (
+          <div className="p-12 text-center">
+            <h2 className="text-lg font-semibold text-slate-900">
+              No hay partituras registradas
+            </h2>
 
-          </thead>
+            <p className="mt-2 text-sm text-slate-500">
+              Crea la primera partitura para comenzar el catálogo.
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
 
-          <tbody>
+            <table className="w-full min-w-[900px]">
 
-            {partituras.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={7}
-                  className="p-6 text-center text-gray-500"
-                >
-                  No hay partituras registradas.
-                </td>
-              </tr>
-            ) : (
-              partituras.map((partitura) => (
+              <thead className="border-b border-slate-200 bg-slate-50">
 
-                <tr
-                  key={partitura.id}
-                  className="border-t"
-                >
+                <tr>
+                  <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Canción
+                  </th>
 
-                  <td className="p-3 font-medium">
-                    {partitura.cancion.titulo}
-                  </td>
+                  <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Compositor
+                  </th>
 
-                  <td className="p-3">
-                    {partitura.cancion.compositor || "-"}
-                  </td>
+                  <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Instrumento
+                  </th>
 
-                  <td className="p-3">
-                    {partitura.instrumento}
-                  </td>
+                  <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Tonalidad
+                  </th>
 
-                  <td className="p-3 font-medium">
-                    {partitura.tonalidad}
-                  </td>
+                  <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Nivel
+                  </th>
 
-                  <td className="p-3">
-                    {partitura.nivel}
-                  </td>
+                  <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Estado
+                  </th>
 
-                  <td className="p-3">
-                    {partitura.publicada
-                      ? "Publicada"
-                      : "Oculta"}
-                  </td>
-
-                  <td className="p-3">
-
-                    <div className="flex justify-end gap-2">
-
-                      <Link
-                        href={`/partituras/${partitura.id}`}
-                        className="rounded border px-3 py-1 hover:bg-gray-100"
-                      >
-                        Ver
-                      </Link>
-
-                      <Link
-                        href={`/admin/partituras/${partitura.id}/editar`}
-                        className="rounded border px-3 py-1 hover:bg-gray-100"
-                      >
-                        Editar
-                      </Link>
-
-                      <button
-                        type="button"
-                        className="rounded border px-3 py-1 text-red-600 hover:bg-red-50"
-                      >
-                        Eliminar
-                      </button>
-
-                    </div>
-
-                  </td>
-
+                  <th className="whitespace-nowrap px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Acciones
+                  </th>
                 </tr>
 
-              ))
-            )}
+              </thead>
 
-          </tbody>
+              <tbody>
 
-        </table>
+                {partituras.map((partitura) => (
+
+                  <tr
+                    key={partitura.id}
+                    className="border-t border-slate-100 hover:bg-slate-50"
+                  >
+
+                    <td className="px-4 py-4 font-semibold text-slate-900">
+                      {partitura.cancion.titulo}
+                    </td>
+
+                    <td className="px-4 py-4 text-sm text-slate-600">
+                      {partitura.cancion.compositor || "-"}
+                    </td>
+
+                    <td className="px-4 py-4 text-sm text-slate-600">
+                      {partitura.instrumento}
+                    </td>
+
+                    <td className="px-4 py-4">
+                      <span className="rounded-md bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">
+                        {partitura.tonalidad}
+                      </span>
+                    </td>
+
+                    <td className="px-4 py-4">
+                      <span className="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
+                        {partitura.nivel}
+                      </span>
+                    </td>
+
+                    <td className="px-4 py-4">
+                      <span
+                        className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+                          partitura.publicada
+                            ? "bg-green-100 text-green-800"
+                            : "bg-slate-100 text-slate-600"
+                        }`}
+                      >
+                        {partitura.publicada ? "Publicada" : "Oculta"}
+                      </span>
+                    </td>
+
+                    <td className="px-4 py-4 text-right">
+
+                      <div className="flex justify-end gap-2">
+
+                        <Link
+                          href={`/partituras/${partitura.id}`}
+                          className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                        >
+                          Ver
+                        </Link>
+
+                        <Link
+                          href={`/admin/partituras/${partitura.id}/editar`}
+                          className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                        >
+                          Editar
+                        </Link>
+
+                        <form action={eliminarPartitura}>
+                          <input
+                            type="hidden"
+                            name="id"
+                            value={partitura.id}
+                          />
+
+                          <button
+                            type="submit"
+                            className="rounded-lg border border-red-300 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50"
+                          >
+                            Eliminar
+                          </button>
+                        </form>
+
+                      </div>
+
+                    </td>
+
+                  </tr>
+
+                ))}
+
+              </tbody>
+
+            </table>
+
+          </div>
+        )}
 
       </div>
 

@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { crearSolicitud } from "@/app/actions/solicitud.actions";
 
@@ -17,6 +19,10 @@ type Props = {
 export default function SolicitudForm({
   canciones,
 }: Props) {
+  const router = useRouter();
+  const [crearCancion, setCrearCancion] = useState(
+    canciones.length === 0
+  );
   const [cancionId, setCancionId] = useState("");
   const [tonalidadSolicitada, setTonalidadSolicitada] =
     useState("");
@@ -42,13 +48,12 @@ export default function SolicitudForm({
       );
 
       formData.set("cancionId", cancionId);
+      formData.set("nuevaCancion", crearCancion ? "true" : "false");
       formData.set(
         "tonalidadSolicitada",
         tonalidadSolicitada
       );
 
-      // Los datos de la canción se envían para
-      // mantener compatibilidad con la acción.
       if (cancionSeleccionada) {
         formData.set(
           "titulo",
@@ -69,8 +74,8 @@ export default function SolicitudForm({
         return;
       }
 
-      window.location.href =
-        "/solicitudes?success=created";
+      router.push("/solicitudes?success=created");
+      router.refresh();
 
     } catch (error) {
       console.error(error);
@@ -107,32 +112,57 @@ export default function SolicitudForm({
           Canción *
         </label>
 
-        <select
-          id="cancionId"
-          name="cancionId"
-          required
-          value={cancionId}
-          onChange={(e) =>
-            setCancionId(e.target.value)
-          }
-          className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
-        >
-          <option value="">
-            Selecciona una canción
-          </option>
+        <label className="mb-3 flex items-center gap-3 text-sm text-slate-600">
+          <input
+            type="checkbox"
+            checked={crearCancion}
+            onChange={(event) => {
+              setCrearCancion(event.target.checked);
+              if (event.target.checked) {
+                setCancionId("");
+              }
+            }}
+          />
+          Solicitar una canción nueva
+        </label>
 
-          {canciones.map((cancion) => (
-            <option
-              key={cancion.id}
-              value={cancion.id}
-            >
-              {cancion.titulo}
-              {cancion.compositor
-                ? ` — ${cancion.compositor}`
-                : ""}
-            </option>
-          ))}
-        </select>
+        {crearCancion ? (
+          <div className="space-y-3 rounded-lg bg-slate-50 p-4">
+            <input
+              id="titulo"
+              name="titulo"
+              type="text"
+              required
+              placeholder="Título de la canción"
+              className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+            />
+            <input
+              id="compositor"
+              name="compositor"
+              type="text"
+              placeholder="Compositor (opcional)"
+              className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+            />
+          </div>
+        ) : (
+          <select
+            id="cancionId"
+            name="cancionId"
+            required
+            value={cancionId}
+            onChange={(e) => setCancionId(e.target.value)}
+            className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+          >
+            <option value="">Selecciona una canción</option>
+
+            {canciones.map((cancion) => (
+              <option key={cancion.id} value={cancion.id}>
+                {cancion.titulo}
+                {cancion.compositor ? ` — ${cancion.compositor}` : ""}
+              </option>
+            ))}
+          </select>
+        )}
 
         {canciones.length === 0 && (
           <p className="mt-2 text-sm text-red-600">
@@ -372,7 +402,7 @@ export default function SolicitudForm({
           type="submit"
           disabled={
             cargando ||
-            canciones.length === 0
+            false
           }
           className="rounded-lg bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
         >
@@ -381,12 +411,12 @@ export default function SolicitudForm({
             : "Enviar solicitud"}
         </button>
 
-        <a
+        <Link
           href="/partituras"
           className="rounded-lg border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
         >
           Cancelar
-        </a>
+        </Link>
 
       </div>
 
