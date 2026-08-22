@@ -11,12 +11,21 @@ export async function crearSolicitud(formData: FormData) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // -----------------------------------------
+  // Validar sesión
+  // -----------------------------------------
+
   if (!user) {
     return {
       success: false,
-      message: "Debes iniciar sesión para enviar una solicitud.",
+      message:
+        "Debes iniciar sesión para enviar una solicitud.",
     };
   }
+
+  // -----------------------------------------
+  // Obtener usuario
+  // -----------------------------------------
 
   const usuario = await prisma.usuario.findUnique({
     where: {
@@ -27,7 +36,8 @@ export async function crearSolicitud(formData: FormData) {
   if (!usuario) {
     return {
       success: false,
-      message: "No se encontró tu usuario en ScoreHub.",
+      message:
+        "No se encontró tu usuario en ScoreHub.",
     };
   }
 
@@ -38,45 +48,201 @@ export async function crearSolicitud(formData: FormData) {
     };
   }
 
-  const titulo = String(formData.get("titulo") ?? "").trim();
-  const compositor = String(formData.get("compositor") ?? "").trim();
-  const instrumento = String(formData.get("instrumento") ?? "").trim();
-  const descripcion = String(formData.get("descripcion") ?? "").trim();
-  const comentarios = String(formData.get("comentarios") ?? "").trim();
+  // -----------------------------------------
+  // Obtener datos del formulario
+  // -----------------------------------------
+
+  const titulo = String(
+    formData.get("titulo") ?? ""
+  ).trim();
+
+  const compositor = String(
+    formData.get("compositor") ?? ""
+  ).trim();
+
+  const instrumento = String(
+    formData.get("instrumento") ?? ""
+  ).trim();
+
+  const descripcion = String(
+    formData.get("descripcion") ?? ""
+  ).trim();
+
+  const comentarios = String(
+    formData.get("comentarios") ?? ""
+  ).trim();
+
+  const tonalidadSolicitada = String(
+    formData.get("tonalidadSolicitada") ?? ""
+  ).trim();
+
+  const cancionId = String(
+    formData.get("cancionId") ?? ""
+  ).trim();
+
+  // -----------------------------------------
+  // Validaciones
+  // -----------------------------------------
 
   if (!titulo) {
     return {
       success: false,
-      message: "El título de la partitura es obligatorio.",
+      message:
+        "El título de la partitura es obligatorio.",
     };
   }
 
+  if (!instrumento) {
+    return {
+      success: false,
+      message:
+        "El instrumento es obligatorio.",
+    };
+  }
+
+  if (!tonalidadSolicitada) {
+    return {
+      success: false,
+      message:
+        "La tonalidad solicitada es obligatoria.",
+    };
+  }
+
+  // -----------------------------------------
+  // Buscar canción
+  // -----------------------------------------
+
+  let cancion = null;
+
+  if (cancionId) {
+    cancion = await prisma.cancion.findUnique({
+      where: {
+        id: cancionId,
+      },
+    });
+
+    if (!cancion) {
+      return {
+        success: false,
+        message:
+          "La canción seleccionada no existe.",
+      };
+    }
+  }
+
+  // -----------------------------------------
+  // Si no seleccionó canción, buscar por título
+  // -----------------------------------------
+
+  if (!cancion) {
+    cancion = await prisma.cancion.findFirst({
+      where: {
+        titulo: {
+          equals: titulo,
+          mode: "insensitive",
+        },
+      },
+    });
+
+    // -----------------------------------------
+    // Crear canción si todavía no existe
+    // -----------------------------------------
+
+    if (!cancion) {
+      cancion = await prisma.cancion.create({
+        data: {
+          titulo,
+          compositor: compositor || null,
+          descripcion: descripcion || null,
+          genero: "Pendiente",
+        },
+      });
+    }
+  }
+
   try {
+    // -----------------------------------------
+    // Verificar si ya existe una partitura
+    // para esa canción y tonalidad
+    // -----------------------------------------
+
+    const partituraExistente =
+      await prisma.partitura.findFirst({
+        where: {
+          cancionId: cancion.id,
+          tonalidad: tonalidadSolicitada,
+          publicada: true,
+        },
+      });
+
+    if (partituraExistente) {
+      return {
+        success: false,
+        message:
+          `Ya existe una partitura de "${cancion.titulo}" en tonalidad ${tonalidadSolicitada}.`,
+      };
+    }
+
+    // -----------------------------------------
+    // Crear solicitud
+    // -----------------------------------------
+
     await prisma.solicitudPartitura.create({
       data: {
         usuarioId: usuario.id,
-        titulo,
-        compositor: compositor || null,
-        instrumento: instrumento || null,
-        descripcion: descripcion || null,
-        comentarios: comentarios || null,
+
+        cancionId: cancion.id,
+
+        titulo: cancion.titulo,
+
+        compositor:
+          compositor ||
+          cancion.compositor ||
+          null,
+
+        instrumento:
+          instrumento || null,
+
+        descripcion:
+          descripcion ||
+          cancion.descripcion ||
+          null,
+
+        comentarios:
+          comentarios || null,
+
+        tonalidadSolicitada,
+
         estado: "PENDIENTE",
       },
     });
 
+    // -----------------------------------------
+    // Actualizar páginas
+    // -----------------------------------------
+
     revalidatePath("/solicitudes");
     revalidatePath("/admin/solicitudes");
 
+    // -----------------------------------------
+    // Respuesta
+    // -----------------------------------------
+
     return {
       success: true,
-      message: "Solicitud enviada correctamente.",
+      message:
+        "Solicitud enviada correctamente.",
     };
   } catch (error) {
-    console.error("ERROR CREANDO SOLICITUD:", error);
+    console.error(
+      "ERROR CREANDO SOLICITUD:",
+      error
+    );
 
     return {
       success: false,
-      message: "No fue posible crear la solicitud.",
+      message:
+        "No fue posible crear la solicitud.",
     };
   }
 }

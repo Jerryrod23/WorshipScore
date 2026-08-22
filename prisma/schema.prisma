@@ -8,16 +8,132 @@ datasource db {
 }
 
 model Usuario {
-  id            String   @id @default(uuid())
-  authUserId    String   @unique @db.Uuid
+  id            String               @id @default(uuid())
+  authUserId    String               @unique @db.Uuid
   nombre        String
-  email         String   @unique
-  rol           Rol      @default(USER)
-  estado        Estado   @default(ACTIVO)
-  fechaRegistro DateTime @default(now())
+  email         String               @unique
+  rol           Rol                  @default(USER)
+  estado        Estado               @default(ACTIVO)
+  fechaRegistro DateTime             @default(now())
+  descargas     Descarga[]
+  solicitudes   SolicitudPartitura[]
+  notificaciones Notificacion[]
+}
 
-  descargas   Descarga[]
-  solicitudes SolicitudPartitura[]
+model Cancion {
+  id                 String               @id @default(uuid()) @db.Uuid
+  titulo             String
+  compositor         String?
+  descripcion        String?
+  genero             String?
+  fechaCreacion      DateTime             @default(now())
+  fechaActualizacion DateTime             @default(now()) @updatedAt
+  partituras         Partitura[]
+  solicitudes        SolicitudPartitura[]
+
+  @@index([titulo])
+  @@index([compositor])
+  @@index([genero])
+}
+
+model Partitura {
+  id                 String               @id @default(uuid())
+  instrumento        String
+  nivel              NivelPartitura       @default(INTERMEDIO)
+  tonalidad          String
+  portadaUrl         String?
+  archivoPdf         String?
+  archivoMidi        String?
+  archivoMusicXml    String?
+  publicada          Boolean              @default(true)
+  fechaCreacion      DateTime             @default(now())
+  fechaActualizacion DateTime             @updatedAt
+  cancionId          String               @db.Uuid
+  descargas          Descarga[]
+  cancion            Cancion              @relation(fields: [cancionId], references: [id], onDelete: Cascade)
+  solicitudes        SolicitudPartitura[]
+
+  @@index([cancionId])
+  @@index([instrumento])
+  @@index([publicada])
+}
+
+model Descarga {
+  id          String    @id @default(uuid())
+  usuarioId   String
+  partituraId String
+  fecha       DateTime  @default(now())
+  partitura   Partitura @relation(fields: [partituraId], references: [id], onDelete: Cascade)
+  usuario     Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+  @@index([partituraId])
+  @@index([fecha])
+}
+
+model SolicitudPartitura {
+  id                  String          @id @default(uuid())
+  usuarioId           String
+  partituraId         String?
+  titulo              String
+  compositor          String?
+  instrumento         String?
+  descripcion         String?
+  comentarios         String?
+  estado              EstadoSolicitud @default(PENDIENTE)
+  fechaSolicitud      DateTime        @default(now())
+  fechaActualizacion  DateTime        @updatedAt
+  cancionId           String          @db.Uuid
+  tonalidadSolicitada String?
+  cancion             Cancion         @relation(fields: [cancionId], references: [id], onDelete: Cascade)
+  partitura           Partitura?      @relation(fields: [partituraId], references: [id])
+  usuario             Usuario         @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  notificaciones      Notificacion[]
+
+  @@index([usuarioId])
+  @@index([cancionId])
+  @@index([partituraId])
+  @@index([estado])
+  @@index([fechaSolicitud])
+}
+
+model Notificacion {
+  id            String             @id @default(uuid())
+  usuarioId     String
+  solicitudId   String
+  titulo        String
+  mensaje       String
+  leida         Boolean            @default(false)
+  fechaCreacion DateTime           @default(now())
+  usuario       Usuario            @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  solicitud     SolicitudPartitura @relation(fields: [solicitudId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId, leida])
+  @@index([solicitudId])
+  @@index([fechaCreacion])
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model Partitura_backup {
+  id                 String?
+  titulo             String?
+  compositor         String?
+  descripcion        String?
+  instrumento        String?
+  genero             String?
+  nivel              NivelPartitura?
+  tonalidad          String?
+  portadaUrl         String?
+  archivoPdf         String?
+  archivoMidi        String?
+  archivoMusicXml    String?
+  publicada          Boolean?
+  fechaCreacion      DateTime?
+  fechaActualizacion DateTime?
+  cancionId          String?         @db.Uuid
+
+  @@ignore
 }
 
 enum Rol {
@@ -30,100 +146,10 @@ enum Estado {
   INACTIVO
 }
 
-model Cancion {
-  id                 String   @id @default(uuid())
-  titulo             String
-  compositor         String?
-  descripcion        String?
-  genero             String?
-
-  fechaCreacion      DateTime @default(now())
-  fechaActualizacion DateTime @updatedAt
-
-  partituras  Partitura[]
-  solicitudes SolicitudPartitura[]
-
-  @@index([titulo])
-  @@index([compositor])
-  @@index([genero])
-}
-
-model Partitura {
-  id        String  @id @default(uuid())
-  cancionId String
-  cancion   Cancion @relation(fields: [cancionId], references: [id], onDelete: Cascade)
-
-  instrumento String
-  nivel       NivelPartitura @default(INTERMEDIO)
-  tonalidad   String
-
-  portadaUrl      String?
-  archivoPdf      String?
-  archivoMidi     String?
-  archivoMusicXml String?
-
-  publicada Boolean @default(true)
-
-  fechaCreacion      DateTime @default(now())
-  fechaActualizacion DateTime @updatedAt
-
-  descargas   Descarga[]
-  solicitudes SolicitudPartitura[]
-
-  @@index([cancionId])
-  @@index([instrumento])
-  @@index([tonalidad])
-  @@index([publicada])
-  @@unique([cancionId, instrumento, tonalidad])
-}
-
 enum NivelPartitura {
   PRINCIPIANTE
   INTERMEDIO
   AVANZADO
-}
-
-model Descarga {
-  id String @id @default(uuid())
-
-  usuarioId   String
-  partituraId String
-  fecha       DateTime @default(now())
-
-  usuario   Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  partitura Partitura @relation(fields: [partituraId], references: [id], onDelete: Cascade)
-
-  @@index([usuarioId])
-  @@index([partituraId])
-  @@index([fecha])
-}
-
-model SolicitudPartitura {
-  id String @id @default(uuid())
-
-  usuarioId   String
-  cancionId   String
-  partituraId String?
-
-  tonalidadSolicitada String
-
-  descripcion String?
-  comentarios String?
-
-  estado EstadoSolicitud @default(PENDIENTE)
-
-  fechaSolicitud     DateTime @default(now())
-  fechaActualizacion DateTime @updatedAt
-
-  usuario   Usuario    @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  cancion   Cancion    @relation(fields: [cancionId], references: [id], onDelete: Cascade)
-  partitura Partitura? @relation(fields: [partituraId], references: [id], onDelete: SetNull)
-
-  @@index([usuarioId])
-  @@index([cancionId])
-  @@index([partituraId])
-  @@index([estado])
-  @@index([fechaSolicitud])
 }
 
 enum EstadoSolicitud {

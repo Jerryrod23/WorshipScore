@@ -7,14 +7,22 @@ export default async function EditarPartituraPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-
   const { id } = await params;
 
-  const partitura = await prisma.partitura.findUnique({
-    where: {
-      id,
-    },
-  });
+  const [partitura, canciones] =
+    await Promise.all([
+      prisma.partitura.findUnique({
+        where: {
+          id,
+        },
+      }),
+
+      prisma.cancion.findMany({
+        orderBy: {
+          titulo: "asc",
+        },
+      }),
+    ]);
 
   if (!partitura) {
     notFound();
@@ -23,14 +31,23 @@ export default async function EditarPartituraPage({
   return (
     <div className="container mx-auto py-6">
 
-      <h1 className="text-3xl font-bold mb-6">
+      <h1 className="mb-6 text-3xl font-bold">
         Editar Partitura
       </h1>
 
       <PartituraForm
-        initialData={partitura}
+        canciones={canciones}
+        initialData={{
+          id: partitura.id,
+          cancionId: partitura.cancionId,
+          instrumento: partitura.instrumento,
+          nivel: partitura.nivel,
+          tonalidad: partitura.tonalidad,
+          publicada: partitura.publicada,
+          archivoPdf: partitura.archivoPdf,
+        }}
       />
 
     </div>
   );
-}
+} 

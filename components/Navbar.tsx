@@ -1,11 +1,25 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-export default function Navbar() {
+type Props = {
+  esAdmin?: boolean;
+  notificacionesNoLeidas?: number;
+};
+
+export default function Navbar({
+  esAdmin = false,
+  notificacionesNoLeidas = 0,
+}: Props) {
   const [usuario, setUsuario] = useState<string | null>(null);
+  const [administrador, setAdministrador] = useState(esAdmin);
+  const [notificaciones, setNotificaciones] = useState(
+    notificacionesNoLeidas
+  );
+  const router = useRouter();
 
   useEffect(() => {
     const supabase = createClient();
@@ -24,19 +38,22 @@ export default function Navbar() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setUsuario(session?.user?.email ?? null);
+      setAdministrador(session ? esAdmin : false);
+      setNotificaciones(session ? notificacionesNoLeidas : 0);
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [esAdmin, notificacionesNoLeidas]);
 
   async function cerrarSesion() {
     const supabase = createClient();
 
     await supabase.auth.signOut();
 
-    window.location.href = "/";
+    router.push("/");
+    router.refresh();
   }
 
   return (
@@ -79,17 +96,51 @@ export default function Navbar() {
           >
             Solicitar partitura
           </Link>
+
+          {administrador && (
+            <Link
+              href="/admin"
+              className="text-sm font-semibold text-slate-900 transition hover:text-slate-600"
+            >
+              Panel admin
+            </Link>
+          )}
         </nav>
 
         {/* User section */}
         <div className="flex items-center gap-4">
           {usuario ? (
             <>
+              {administrador && (
+                <div className="hidden items-center gap-3 lg:flex">
+                  <Link
+                    href="/admin/solicitudes"
+                    className="text-sm text-slate-600 hover:text-slate-900"
+                  >
+                    Solicitudes
+                  </Link>
+
+                  <Link
+                    href="/admin/usuarios"
+                    className="text-sm text-slate-600 hover:text-slate-900"
+                  >
+                    Usuarios
+                  </Link>
+                </div>
+              )}
+
               <Link
                 href="/perfil"
                 className="hidden text-sm text-slate-600 hover:text-slate-900 sm:block"
               >
                 {usuario}
+              </Link>
+
+              <Link
+                href="/solicitudes"
+                className="hidden text-sm text-slate-600 hover:text-slate-900 sm:block"
+              >
+                Avisos{notificaciones > 0 ? ` (${notificaciones})` : ""}
               </Link>
 
               <button

@@ -1,7 +1,20 @@
 import Link from "next/link";
+import { prisma } from "@/lib/prisma";
 import SolicitudForm from "@/components/solicitudes/SolicitudForm";
 
-export default function NuevaSolicitudPage() {
+export default async function NuevaSolicitudPage() {
+  const canciones = await prisma.cancion.findMany({
+    orderBy: {
+      titulo: "asc",
+    },
+    select: {
+      id: true,
+      titulo: true,
+      compositor: true,
+      descripcion: true,
+    },
+  });
+
   return (
     <main className="min-h-screen bg-slate-50 py-12">
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
@@ -19,16 +32,17 @@ export default function NuevaSolicitudPage() {
           </h1>
 
           <p className="mt-2 text-sm text-slate-500">
-            ¿No encuentras la partitura que necesitas?
-            Envíanos una solicitud y la revisaremos.
+            Selecciona la canción que necesitas y especifica
+            la tonalidad de la partitura que deseas.
           </p>
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-          <SolicitudForm />
+          <SolicitudForm canciones={canciones} />
         </div>
 
       </div>
     </main>
   );
 }
+

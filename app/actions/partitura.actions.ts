@@ -3,72 +3,122 @@
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 
 export async function guardarPartitura(formData: FormData) {
   await requireAdmin();
 
-  let isUpdate = false;
-
   try {
-    const id = formData.get("id") as string;
-    isUpdate = Boolean(id);
+    const id = formData.get("id") as string | null;
 
-    const titulo = formData.get("titulo") as string;
-    const compositor = formData.get("compositor") as string;
-    const descripcion = formData.get("descripcion") as string;
+    const cancionId = formData.get("cancionId") as string;
     const instrumento = formData.get("instrumento") as string;
-    const genero = formData.get("genero") as string;
     const nivel = formData.get("nivel") as any;
     const tonalidad = formData.get("tonalidad") as string;
     const publicada = formData.get("publicada") === "true";
 
-    if (!titulo?.trim()) {
-      throw new Error("El título es obligatorio");
+    // -----------------------------------------
+    // Validaciones
+    // -----------------------------------------
+
+    if (!cancionId?.trim()) {
+      throw new Error("Debe seleccionar una canción.");
     }
 
+    if (!instrumento?.trim()) {
+      throw new Error("El instrumento es obligatorio.");
+    }
+
+    if (!tonalidad?.trim()) {
+      throw new Error("La tonalidad es obligatoria.");
+    }
+
+    // -----------------------------------------
+    // Verificar que exista la canción
+    // -----------------------------------------
+
+    const cancion = await prisma.cancion.findUnique({
+      where: {
+        id: cancionId,
+      },
+    });
+
+    if (!cancion) {
+      throw new Error("La canción seleccionada no existe.");
+    }
+
+    // -----------------------------------------
+    // ACTUALIZAR
+    // -----------------------------------------
+
     if (id) {
-      await prisma.partitura.update({
-        where: { id },
+      const partitura = await prisma.partitura.update({
+        where: {
+          id,
+        },
         data: {
-          titulo,
-          compositor: compositor || null,
-          descripcion: descripcion || null,
+          cancionId,
           instrumento,
-          genero,
           nivel,
-          tonalidad: tonalidad || null,
+          tonalidad,
           publicada,
         },
       });
 
       revalidatePath("/admin");
       revalidatePath("/admin/partituras");
-      revalidatePath(`/admin/partituras/${id}`);
       revalidatePath(`/admin/partituras/${id}/editar`);
+      revalidatePath(`/partituras/${id}`);
 
-      redirect(`/admin/partituras?success=updated`);
+      return {
+        success: true,
+        id: partitura.id,
+      };
     }
+
+    // -----------------------------------------
+    // Verificar duplicado
+    // -----------------------------------------
+
+    const duplicada = await prisma.partitura.findFirst({
+      where: {
+        cancionId,
+        tonalidad,
+      },
+    });
+
+    if (duplicada) {
+      throw new Error(
+        `Ya existe una partitura para "${cancion.titulo}" en tonalidad ${tonalidad}.`
+      );
+    }
+
+    // -----------------------------------------
+    // CREAR
+    // -----------------------------------------
 
     const partitura = await prisma.partitura.create({
       data: {
-        titulo,
-        compositor: compositor || null,
-        descripcion: descripcion || null,
+        cancionId,
         instrumento,
-        genero,
         nivel,
-        tonalidad: tonalidad || null,
+        tonalidad,
         publicada,
       },
     });
+
+    revalidatePath("/admin");
+    revalidatePath("/admin/partituras");
 
     return {
       success: true,
       id: partitura.id,
     };
+
   } catch (error) {
-    console.error("ERROR EN GUARDAR PARTITURA:", error);
+    console.error(
+      "ERROR EN GUARDAR PARTITURA:",
+      error
+    );
 
     return {
       success: false,
@@ -105,7 +155,6 @@ export async function guardarArchivoPdf(
 
   revalidatePath("/admin");
   revalidatePath("/admin/partituras");
-  revalidatePath(`/admin/partituras/${id}`);
   revalidatePath(`/partituras/${id}`);
 
   return {

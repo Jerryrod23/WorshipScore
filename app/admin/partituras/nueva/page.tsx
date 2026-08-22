@@ -1,16 +1,24 @@
-import PartituraForm
-from "@/components/admin/partituras/PartituraForm";
+import { prisma } from "@/lib/prisma";
+import PartituraForm from "@/components/admin/partituras/PartituraForm";
 
-export default function NuevaPartituraPage() {
+export default async function NuevaPartituraPage() {
+  const canciones = await prisma.cancion.findMany({
+    orderBy: {
+      titulo: "asc",
+    },
+  });
+
   return (
     <div className="container mx-auto p-6">
 
-      <h1 className="text-3xl font-bold mb-8">
+      <h1 className="mb-8 text-3xl font-bold">
         Nueva Partitura
       </h1>
 
-      <PartituraForm />
+      <PartituraForm
+        canciones={canciones}
+      />
 
     </div>
   );
-}   
+}

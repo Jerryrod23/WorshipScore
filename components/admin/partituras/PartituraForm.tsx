@@ -12,41 +12,37 @@ type NivelPartitura =
   | "INTERMEDIO"
   | "AVANZADO";
 
+type Cancion = {
+  id: string;
+  titulo: string;
+  compositor: string | null;
+  genero: string | null;
+};
+
 type PartituraFormProps = {
+  canciones: Cancion[];
+
   initialData?: {
     id: string;
-    titulo: string;
-    compositor: string | null;
-    descripcion: string | null;
+    cancionId: string;
     instrumento: string;
-    genero: string;
     nivel: NivelPartitura;
-    tonalidad: string | null;
+    tonalidad: string;
     publicada: boolean;
+    archivoPdf: string | null;
   };
 };
 
 export default function PartituraForm({
+  canciones,
   initialData,
 }: PartituraFormProps) {
-  const [titulo, setTitulo] = useState(
-    initialData?.titulo ?? ""
-  );
-
-  const [compositor, setCompositor] = useState(
-    initialData?.compositor ?? ""
-  );
-
-  const [descripcion, setDescripcion] = useState(
-    initialData?.descripcion ?? ""
+  const [cancionId, setCancionId] = useState(
+    initialData?.cancionId ?? ""
   );
 
   const [instrumento, setInstrumento] = useState(
     initialData?.instrumento ?? ""
-  );
-
-  const [genero, setGenero] = useState(
-    initialData?.genero ?? ""
   );
 
   const [nivel, setNivel] = useState<NivelPartitura>(
@@ -68,6 +64,10 @@ export default function PartituraForm({
 
   const [error, setError] = useState("");
 
+  const cancionSeleccionada = canciones.find(
+    (cancion) => cancion.id === cancionId
+  );
+
   async function handleSubmit(
     event: React.FormEvent<HTMLFormElement>
   ) {
@@ -83,11 +83,8 @@ export default function PartituraForm({
         formData.append("id", initialData.id);
       }
 
-      formData.append("titulo", titulo);
-      formData.append("compositor", compositor);
-      formData.append("descripcion", descripcion);
+      formData.append("cancionId", cancionId);
       formData.append("instrumento", instrumento);
-      formData.append("genero", genero);
       formData.append("nivel", nivel);
       formData.append("tonalidad", tonalidad);
       formData.append(
@@ -95,7 +92,6 @@ export default function PartituraForm({
         publicada ? "true" : "false"
       );
 
-      // Crear o actualizar la partitura
       const resultado = await guardarPartitura(formData);
 
       if (!resultado?.success) {
@@ -105,11 +101,19 @@ export default function PartituraForm({
         );
       }
 
-      // En edición no necesitamos crear nuevamente la partitura.
       const partituraId =
         initialData?.id ?? resultado.id;
 
-      // Subir PDF si el administrador seleccionó uno
+      if (!partituraId) {
+        throw new Error(
+          "No se obtuvo el ID de la partitura."
+        );
+      }
+
+      // -----------------------------------------
+      // SUBIR PDF
+      // -----------------------------------------
+
       if (archivoPdf) {
         if (archivoPdf.type !== "application/pdf") {
           throw new Error(
@@ -117,7 +121,6 @@ export default function PartituraForm({
           );
         }
 
-        // Límite de 20 MB
         const maxSize = 20 * 1024 * 1024;
 
         if (archivoPdf.size > maxSize) {
@@ -128,9 +131,7 @@ export default function PartituraForm({
 
         const supabase = createClient();
 
-        const extension = "pdf";
-
-        const ruta = `${partituraId}/partitura.${extension}`;
+        const ruta = `${partituraId}/partitura.pdf`;
 
         const { error: uploadError } =
           await supabase.storage
@@ -152,9 +153,8 @@ export default function PartituraForm({
           );
         }
 
-        // Guardar la ruta en PostgreSQL
         await guardarArchivoPdf(
-          partituraId!,
+          partituraId,
           ruta
         );
       }
@@ -163,6 +163,7 @@ export default function PartituraForm({
         `/admin/partituras?success=${
           initialData ? "updated" : "created"
         }`;
+
     } catch (error) {
       console.error(error);
 
@@ -171,6 +172,7 @@ export default function PartituraForm({
           ? error.message
           : "Ocurrió un error inesperado."
       );
+
     } finally {
       setCargando(false);
     }
@@ -189,52 +191,54 @@ export default function PartituraForm({
         </div>
       )}
 
+      {/* Canción */}
       <div>
         <label className="mb-2 block font-medium">
-          Título
+          Canción
         </label>
 
-        <input
-          type="text"
+        <select
           required
+          disabled={Boolean(initialData)}
           className="w-full rounded border px-3 py-2"
-          value={titulo}
+          value={cancionId}
           onChange={(e) =>
-            setTitulo(e.target.value)
+            setCancionId(e.target.value)
           }
-        />
+        >
+          <option value="">
+            Seleccione una canción
+          </option>
+
+          {canciones.map((cancion) => (
+            <option
+              key={cancion.id}
+              value={cancion.id}
+            >
+              {cancion.titulo}
+              {cancion.compositor
+                ? ` — ${cancion.compositor}`
+                : ""}
+            </option>
+          ))}
+        </select>
+
+        {cancionSeleccionada && (
+          <div className="mt-2 rounded bg-slate-50 p-3 text-sm text-slate-600">
+            <p>
+              <strong>Género:</strong>{" "}
+              {cancionSeleccionada.genero ?? "-"}
+            </p>
+
+            <p>
+              <strong>Compositor:</strong>{" "}
+              {cancionSeleccionada.compositor ?? "-"}
+            </p>
+          </div>
+        )}
       </div>
 
-      <div>
-        <label className="mb-2 block font-medium">
-          Compositor
-        </label>
-
-        <input
-          type="text"
-          className="w-full rounded border px-3 py-2"
-          value={compositor}
-          onChange={(e) =>
-            setCompositor(e.target.value)
-          }
-        />
-      </div>
-
-      <div>
-        <label className="mb-2 block font-medium">
-          Descripción
-        </label>
-
-        <textarea
-          rows={4}
-          className="w-full rounded border px-3 py-2"
-          value={descripcion}
-          onChange={(e) =>
-            setDescripcion(e.target.value)
-          }
-        />
-      </div>
-
+      {/* Instrumento */}
       <div>
         <label className="mb-2 block font-medium">
           Instrumento
@@ -248,25 +252,11 @@ export default function PartituraForm({
           onChange={(e) =>
             setInstrumento(e.target.value)
           }
+          placeholder="Ejemplo: Piano"
         />
       </div>
 
-      <div>
-        <label className="mb-2 block font-medium">
-          Género
-        </label>
-
-        <input
-          type="text"
-          required
-          className="w-full rounded border px-3 py-2"
-          value={genero}
-          onChange={(e) =>
-            setGenero(e.target.value)
-          }
-        />
-      </div>
-
+      {/* Nivel */}
       <div>
         <label className="mb-2 block font-medium">
           Nivel
@@ -295,6 +285,7 @@ export default function PartituraForm({
         </select>
       </div>
 
+      {/* Tonalidad */}
       <div>
         <label className="mb-2 block font-medium">
           Tonalidad
@@ -302,13 +293,19 @@ export default function PartituraForm({
 
         <input
           type="text"
+          required
           className="w-full rounded border px-3 py-2"
           value={tonalidad}
           onChange={(e) =>
             setTonalidad(e.target.value)
           }
-          placeholder="Ejemplo: Do Mayor, La menor"
+          placeholder="Ejemplo: Do Mayor, Fa Mayor"
         />
+
+        <p className="mt-1 text-sm text-gray-500">
+          Cada canción puede tener varias partituras,
+          una por cada tonalidad.
+        </p>
       </div>
 
       {/* PDF */}
@@ -335,6 +332,12 @@ export default function PartituraForm({
         {archivoPdf && (
           <p className="mt-2 text-sm font-medium text-green-600">
             Archivo seleccionado: {archivoPdf.name}
+          </p>
+        )}
+
+        {initialData?.archivoPdf && !archivoPdf && (
+          <p className="mt-2 text-sm text-slate-500">
+            Esta partitura ya tiene un PDF cargado.
           </p>
         )}
       </div>
